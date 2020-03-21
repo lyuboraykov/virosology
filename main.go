@@ -15,6 +15,8 @@ func main() {
 	population := newPopulation(populationSize, initialInfectedCount, daysToRecover,
 		isolationLevel, maxX, maxY)
 
+	var history []historyItem
+
 	for {
 		goterm.Clear()
 		for _, person := range population {
@@ -34,8 +36,23 @@ func main() {
 		goterm.Flush()
 		currentDay++
 		movePopulation(population, maxX, maxY, currentDay)
+		hi := getHistoryItem(population, currentDay)
+		history = append(history, hi)
+		if hi.infectedCount == 0 {
+			break
+		}
 		time.Sleep(intervalBetweenFrames)
 	}
+	goterm.Clear()
+	goterm.MoveCursor(1, 1)
+	goterm.Println("The experiment lasted: ", len(history))
+	goterm.Flush()
+}
+
+type historyItem struct {
+	infectedCount  int
+	healthyCount   int
+	recoveredCount int
 }
 
 type position struct {
@@ -138,4 +155,18 @@ func movePopulation(population []person, maxX, maxY, currentDay int) {
 
 		population[i].position = candidatePosition
 	}
+}
+
+func getHistoryItem(population []person, currentDay int) historyItem {
+	historyItem := historyItem{}
+	for _, p := range population {
+		if p.isInfected(currentDay) {
+			historyItem.infectedCount++
+		} else if p.isImmune(currentDay) {
+			historyItem.recoveredCount++
+		} else {
+			historyItem.healthyCount++
+		}
+	}
+	return historyItem
 }

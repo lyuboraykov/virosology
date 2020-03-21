@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	currentDay := 1
 	maxX := goterm.Width()
 	maxY := goterm.Height()
@@ -27,6 +28,8 @@ func main() {
 				color = goterm.RED
 			case person.isImmune(currentDay):
 				color = goterm.GREEN
+			case !person.isAlive:
+				color = goterm.YELLOW
 			}
 			_, err := goterm.Print(goterm.Color("*", color))
 			if err != nil {
@@ -35,7 +38,7 @@ func main() {
 		}
 		goterm.Flush()
 		currentDay++
-		movePopulation(population, transmissionCoeff, maxX, maxY, currentDay)
+		movePopulation(population, chanceOfTransmission, chanceOfDeath, maxX, maxY, currentDay, daysUntilDeath)
 		hi := getHistoryItem(population, currentDay)
 		history = append(history, hi)
 		if hi.infectedCount == 0 {
@@ -49,22 +52,27 @@ func main() {
 	chart := goterm.NewLineChart(maxX-10, maxY-10)
 	data := new(goterm.DataTable)
 	data.AddColumn("Time")
-	data.AddColumn(goterm.Color("Infected Count", goterm.RED))
-	data.AddColumn(goterm.Color("Recovered Count", goterm.GREEN))
-	data.AddColumn(goterm.Color("Healthy Count", goterm.WHITE))
+	data.AddColumn("Infected Count")
+	data.AddColumn("Recovered Count")
+	data.AddColumn("Dead Count")
+	data.AddColumn("Healthy Count")
 	for i, hi := range history {
 		data.AddRow(float64(i), float64(hi.infectedCount),
-			float64(hi.recoveredCount), float64(hi.healthyCount))
+			float64(hi.recoveredCount), float64(hi.deadCount), float64(hi.healthyCount))
 	}
 	goterm.Println(chart.Draw(data))
 	goterm.Println("Total days lasted: ", len(history))
-	var peopleInfected int
+	var peopleInfected, peopleDead int
 	for _, p := range population {
+		if !p.isAlive {
+			peopleDead++
+		}
 		if p.infectedAt != 0 {
 			peopleInfected++
 		}
 	}
 	goterm.Println("People infected: ", peopleInfected)
+	goterm.Println("People died: ", peopleDead)
 	goterm.Flush()
 }
 
@@ -72,6 +80,7 @@ type historyItem struct {
 	infectedCount  int
 	healthyCount   int
 	recoveredCount int
+	deadCount      int
 }
 
 type position struct {
@@ -83,15 +92,22 @@ type person struct {
 	position      position
 	infectedAt    int
 	isIsolated    bool
+	isAlive       bool
 	daysToRecover int
 }
 
 func (p person) isInfected(currentDay int) bool {
-	return p.infectedAt != 0 && currentDay-p.infectedAt < p.daysToRecover
+	return p.isAlive &&
+		p.infectedAt != 0 &&
+		currentDay-p.infectedAt < p.daysToRecover
 }
 
 func (p person) isImmune(currentDay int) bool {
-	return p.infectedAt != 0 && currentDay-p.infectedAt > p.daysToRecover
+	return p.isAlive && p.infectedAt != 0 && currentDay-p.infectedAt > p.daysToRecover
+}
+
+func (p person) daysInfected(currentDay int) int {
+	return currentDay - p.infectedAt
 }
 
 func newPopulation(
@@ -118,6 +134,7 @@ func newPopulation(
 					infectedAt:    infectedAt,
 					isIsolated:    wouldOccurWithChance(isolationLevel),
 					daysToRecover: daysToRecover,
+					isAlive:       true,
 				}
 				break
 			}
@@ -136,9 +153,15 @@ func positionTaken(pos position, population []person) (*person, bool) {
 	return nil, false
 }
 
-func movePopulation(population []person, transmissionCoeff float64, maxX, maxY, currentDay int) {
+func movePopulation(population []person, chanceOfTransmission, chanceOfDeath float64, maxX, maxY, currentDay, daysUntilDeath int) {
 	for i := range population {
-		if population[i].isIsolated {
+		if population[i].isIsolated || !population[i].isAlive {
+			continue
+		}
+		if population[i].isInfected(currentDay) &&
+			wouldOccurWithChance(chanceOfDeath) &&
+			population[i].daysInfected(currentDay) == daysUntilDeath {
+			population[i].isAlive = false
 			continue
 		}
 		xOrY := wouldOccurWithChance(0.5)
@@ -159,17 +182,20 @@ func movePopulation(population []person, transmissionCoeff float64, maxX, maxY, 
 		}
 
 		if p, taken := positionTaken(candidatePosition, population); taken {
+			if !p.isAlive {
+				continue
+			}
 			if population[i].isInfected(currentDay) &&
 				!p.isInfected(currentDay) &&
 				!p.isImmune(currentDay) {
-				if wouldOccurWithChance(transmissionCoeff) {
+				if wouldOccurWithChance(chanceOfTransmission) {
 					p.infectedAt = currentDay
 				}
 				continue
 			}
 			if p.isInfected(currentDay) && !population[i].isInfected(currentDay) &&
 				!population[i].isImmune(currentDay) {
-				if wouldOccurWithChance(transmissionCoeff) {
+				if wouldOccurWithChance(chanceOfTransmission) {
 					population[i].infectedAt = currentDay
 				}
 				continue
@@ -185,6 +211,9 @@ func getHistoryItem(population []person, currentDay int) historyItem {
 	for _, p := range population {
 		if p.isInfected(currentDay) {
 			historyItem.infectedCount++
+			if !p.isAlive {
+				historyItem.deadCount++
+			}
 		} else if p.isImmune(currentDay) {
 			historyItem.recoveredCount++
 		} else {

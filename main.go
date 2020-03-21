@@ -53,12 +53,8 @@ func main() {
 	data := new(goterm.DataTable)
 	data.AddColumn("Time")
 	data.AddColumn("Infected Count")
-	data.AddColumn("Recovered Count")
-	data.AddColumn("Dead Count")
-	data.AddColumn("Healthy Count")
 	for i, hi := range history {
-		data.AddRow(float64(i), float64(hi.infectedCount),
-			float64(hi.recoveredCount), float64(hi.deadCount), float64(hi.healthyCount))
+		data.AddRow(float64(i), float64(hi.infectedCount))
 	}
 	goterm.Println(chart.Draw(data))
 	goterm.Println("Total days lasted: ", len(history))

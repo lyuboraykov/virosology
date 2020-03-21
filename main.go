@@ -35,7 +35,7 @@ func main() {
 		}
 		goterm.Flush()
 		currentDay++
-		movePopulation(population, maxX, maxY, currentDay)
+		movePopulation(population, transmissionCoeff, maxX, maxY, currentDay)
 		hi := getHistoryItem(population, currentDay)
 		history = append(history, hi)
 		if hi.infectedCount == 0 {
@@ -98,7 +98,7 @@ func newPopulation(
 	populationSize,
 	initialInfectedCount,
 	daysToRecover int,
-	isolationLevel float32,
+	isolationLevel float64,
 	maxX,
 	maxY int,
 ) []person {
@@ -116,7 +116,7 @@ func newPopulation(
 				population[i] = person{
 					position:      candidatePosition,
 					infectedAt:    infectedAt,
-					isIsolated:    rand.Intn(100) < int(isolationLevel*100),
+					isIsolated:    wouldOccurWithChance(isolationLevel),
 					daysToRecover: daysToRecover,
 				}
 				break
@@ -136,13 +136,13 @@ func positionTaken(pos position, population []person) (*person, bool) {
 	return nil, false
 }
 
-func movePopulation(population []person, maxX, maxY, currentDay int) {
+func movePopulation(population []person, transmissionCoeff float64, maxX, maxY, currentDay int) {
 	for i := range population {
 		if population[i].isIsolated {
 			continue
 		}
-		xOrY := rand.Intn(100) < 50
-		minusOrPlus := rand.Intn(100) < 50
+		xOrY := wouldOccurWithChance(0.5)
+		minusOrPlus := wouldOccurWithChance(0.5)
 		direction := 1
 		if minusOrPlus {
 			direction = -1
@@ -162,12 +162,16 @@ func movePopulation(population []person, maxX, maxY, currentDay int) {
 			if population[i].isInfected(currentDay) &&
 				!p.isInfected(currentDay) &&
 				!p.isImmune(currentDay) {
-				p.infectedAt = currentDay
+				if wouldOccurWithChance(transmissionCoeff) {
+					p.infectedAt = currentDay
+				}
 				continue
 			}
 			if p.isInfected(currentDay) && !population[i].isInfected(currentDay) &&
 				!population[i].isImmune(currentDay) {
-				population[i].infectedAt = currentDay
+				if wouldOccurWithChance(transmissionCoeff) {
+					population[i].infectedAt = currentDay
+				}
 				continue
 			}
 		}
@@ -188,4 +192,8 @@ func getHistoryItem(population []person, currentDay int) historyItem {
 		}
 	}
 	return historyItem
+}
+
+func wouldOccurWithChance(chance float64) bool {
+	return rand.Intn(100) < int(chance*100)
 }

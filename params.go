@@ -6,7 +6,7 @@ const (
 	// populationSize is the size of the initially tested population
 	populationSize = 700
 	// initialInfectedCount is the count of people infected on day 1
-	initialInfectedCount = 1
+	initialInfectedCount = 10
 	// transmissionCoeff is the chance for a disease transmission to occur when two
 	// people have contact. 0 to 1.
 	transmissionCoeff = 0.8

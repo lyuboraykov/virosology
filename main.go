@@ -45,7 +45,26 @@ func main() {
 	}
 	goterm.Clear()
 	goterm.MoveCursor(1, 1)
-	goterm.Println("The experiment lasted: ", len(history))
+	goterm.Flush()
+	chart := goterm.NewLineChart(maxX-10, maxY-10)
+	data := new(goterm.DataTable)
+	data.AddColumn("Time")
+	data.AddColumn(goterm.Color("Infected Count", goterm.RED))
+	data.AddColumn(goterm.Color("Recovered Count", goterm.GREEN))
+	data.AddColumn(goterm.Color("Healthy Count", goterm.WHITE))
+	for i, hi := range history {
+		data.AddRow(float64(i), float64(hi.infectedCount),
+			float64(hi.recoveredCount), float64(hi.healthyCount))
+	}
+	goterm.Println(chart.Draw(data))
+	goterm.Println("Total days lasted: ", len(history))
+	var peopleInfected int
+	for _, p := range population {
+		if p.infectedAt != 0 {
+			peopleInfected++
+		}
+	}
+	goterm.Println("People infected: ", peopleInfected)
 	goterm.Flush()
 }
 
@@ -108,10 +127,10 @@ func newPopulation(
 	return population
 }
 
-func positionTaken(pos position, pop []person) (*person, bool) {
-	for _, p := range pop {
-		if p.position == pos {
-			return &p, true
+func positionTaken(pos position, population []person) (*person, bool) {
+	for i := range population {
+		if population[i].position == pos {
+			return &population[i], true
 		}
 	}
 	return nil, false

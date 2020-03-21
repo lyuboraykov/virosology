@@ -205,11 +205,11 @@ func movePopulation(population []person, chanceOfTransmission, chanceOfDeath flo
 func getHistoryItem(population []person, currentDay int) historyItem {
 	historyItem := historyItem{}
 	for _, p := range population {
+		if !p.isAlive {
+			historyItem.deadCount++
+		}
 		if p.isInfected(currentDay) {
 			historyItem.infectedCount++
-			if !p.isAlive {
-				historyItem.deadCount++
-			}
 		} else if p.isImmune(currentDay) {
 			historyItem.recoveredCount++
 		} else {

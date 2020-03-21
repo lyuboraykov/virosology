@@ -1,0 +1,29 @@
+<html>
+    <head>
+        <title>Virus Spread Simulation</title>
+        <style>
+            .hidden {
+                display: none;
+            }
+            label {
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="content">
+            <p id="stats"></p>
+            <label>Population Size: <input id="pop-size" type="number" value="100" max="500" min="3" /> </label>
+            <label>Initial infected count: <input id="init-infected" type="number" value="1" max="100" min="1" /> </label>
+            <label>Chance of transmission (%): <input id="trans-chance" type="number" value="50" min="1" max="100" /> </label>
+            <label>Chance of death (%): <input id="death-chance" type="number" value="5" min="1" max="100" /> </label>
+            <label>Days to death: <input id="days-to-death" type="number" value="20" min="1" max="100" /> </label>
+            <label>Isolation percentage: <input id="isolation-percentage" type="number" value="10" min="1" max="100" /> </label>
+            <label>Days to recover: <input id="recover-days" type="number" value="100" min="1" max="300" /> </label>
+            <button id="start-button">Start</button>
+        </div>
+        <canvas id="view" class="hidden"></canvas>
+        <button id="stop" class="hidden">Stop</button>
+        <script src="./script.js"></script>
+    </body>
+</html>
